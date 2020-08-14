@@ -1,4 +1,4 @@
-# zim-plugin-terminal
+# Zim Terminal Plugin
 
 This plugin shows a terminal at the bottom pane.
 

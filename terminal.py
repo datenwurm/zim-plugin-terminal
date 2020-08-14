@@ -42,18 +42,18 @@ logger = logging.getLogger('zim.plugins.terminal')
 FONT_SIZE_MIN = 6
 FONT_SIZE_MAX = 72
 DEFAULT_FONT_SIZE = 9
-DEFAULT_FONT_FOREGROUND_COLOR = "#FFFFFF"
-DEFAULT_FONT_BACKGROUND_COLOR = "#000000"
+DEFAULT_FONT_COLOR = "#FFFFFF"
+DEFAULT_BACKGROUND_COLOR = "#000000"
 
 if platform.system() == "Darwin":
-	DEFAULT_SHELL_INTERPRETER = "/bin/bash"
-	DEFAULT_SHELL_CLEAR_COMMAND = "clear\n"
+	DEFAULT_COMMAND_INTERPRETER = "/bin/bash"
+	CLEAR_COMMAND = "clear\n"
 elif platform.system() == "Linux":
-	DEFAULT_SHELL_INTERPRETER = "/bin/bash"
-	DEFAULT_SHELL_CLEAR_COMMAND = "clear\n"
+	DEFAULT_COMMAND_INTERPRETER = "/bin/bash"
+	CLEAR_COMMAND = "clear\n"
 elif platform.system() == "Windows":
-	DEFAULT_SHELL_INTERPRETER = "cmd.exe"
-	DEFAULT_SHELL_CLEAR_COMMAND = "cls\r\n"
+	DEFAULT_COMMAND_INTERPRETER = "cmd.exe"
+	CLEAR_COMMAND = "cls\r\n"
 
 DEFAULT_AUTO_SWITCH_PATH_ON_PAGE_CHANGE = True
 
@@ -70,9 +70,9 @@ class TerminalPlugin(PluginClass):
 		# key, type, label, default
 		('pane', 'choice', _('Position in the window'), BOTTOM_PANE, PANE_POSITIONS),
 		('font_size', 'int', _('Font size'), DEFAULT_FONT_SIZE, (FONT_SIZE_MIN, FONT_SIZE_MAX)),
-		('font_foreground_color', 'color', _('Font foreground color'), DEFAULT_FONT_FOREGROUND_COLOR),
-		('font_background_color', 'color', _('Font background color'), DEFAULT_FONT_BACKGROUND_COLOR),
-		('shell_interpreter', 'string', _('Shell interpreter'), DEFAULT_SHELL_INTERPRETER),
+		('font_color', 'color', _('Font color'), DEFAULT_FONT_COLOR),
+		('background_color', 'color', _('Background color'), DEFAULT_BACKGROUND_COLOR),
+		('command_interpreter', 'string', _('Command interpreter'), DEFAULT_COMMAND_INTERPRETER),
 		('auto_switch_path_on_page_change', 'bool', _('Automatically switch to new path on page change'),
 		 DEFAULT_AUTO_SWITCH_PATH_ON_PAGE_CHANGE),
 	)
@@ -106,13 +106,6 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
 
 	title = _('Terminal') # T: label for pane
 
-	font_size = uistate_property('font_size', DEFAULT_FONT_SIZE)
-	font_foreground_color = uistate_property('font_foreground_color', DEFAULT_FONT_FOREGROUND_COLOR)
-	font_background_color = uistate_property('font_background_color', DEFAULT_FONT_BACKGROUND_COLOR)
-	shell_interpreter = uistate_property('shell_interpreter', DEFAULT_SHELL_INTERPRETER)
-	auto_switch_path_on_page_change = uistate_property('auto_switch_path_on_page_change',
-														DEFAULT_AUTO_SWITCH_PATH_ON_PAGE_CHANGE)
-
 	def __init__(self, plugin, window, uistate):
 		GObject.GObject.__init__(self)
 		self.plugin = plugin
@@ -125,7 +118,7 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
 		self.terminalview.spawn_sync(
 			Vte.PtyFlags.DEFAULT,
 			os.environ['HOME'],
-			[self.shell_interpreter],
+			[self.command_interpreter],
 			[],
 			GLib.SpawnFlags.DO_NOT_REAP_CHILD,
 			None,
@@ -149,14 +142,16 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
 		self.buttonbox.pack_start(change_path_button, False, True, 0)
 
 	def on_preferences_changed(self, *a):
-		self.terminalview.set_color_foreground(self.font_foreground_color)
-		self.terminalview.set_color_background(self.font_background_color)
+		self.terminalview.set_color_foreground(self.font_color)
+		self.terminalview.set_color_background(self.background_color)
 		font = self.terminalview.get_font()
-		font.set_size(16 * Pango.SCALE)
-		
+		font.set_size(self.font_size * Pango.SCALE)
+		self.terminalview.set_font(font)
+
 	def on_properties_button(self):
 		""" Writes the path to the current wiki page to the terminal. """
 		PluginConfigureDialog(self.window, self.plugin).run()
+		self.refresh_path()
 
 	def on_change_path_button(self):
 		self.refresh_path()
@@ -166,14 +161,14 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
 		self.terminalview.spawn_sync(
 			Vte.PtyFlags.DEFAULT,
 			self.path,
-			[self.shell_interpreter],
+			[self.command_interpreter],
 			[],
 			GLib.SpawnFlags.DO_NOT_REAP_CHILD,
 			None,
 			None,
 		)
 		# Clear screen after terminal refresh
-		self.terminalview.feed_child(DEFAULT_SHELL_CLEAR_COMMAND, len(DEFAULT_SHELL_CLEAR_COMMAND))
+		self.terminalview.feed_child(CLEAR_COMMAND, len(CLEAR_COMMAND))
 
 	def set_folder(self, folder):
 		self.folder = folder
@@ -181,16 +176,24 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
 			self.refresh_path()
 
 	@property
-	def font_foreground_color(self):
+	def font_size(self):
+		return self.preferences['font_size']
+
+	@property
+	def font_color(self):
 		rgba = Gdk.RGBA()
-		rgba.parse(self.preferences['font_foreground_color'])
+		rgba.parse(self.preferences['font_color'])
 		return rgba
 
 	@property
-	def font_background_color(self):
+	def background_color(self):
 		rgba = Gdk.RGBA()
-		rgba.parse(self.preferences['font_background_color'])
+		rgba.parse(self.preferences['background_color'])
 		return rgba
+
+	@property
+	def command_interpreter(self):
+		return self.preferences["command_interpreter"]
 
 	@property
 	def path(self):
