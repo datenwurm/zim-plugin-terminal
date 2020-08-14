@@ -12,5 +12,5 @@ This plugin shows a terminal at the bottom pane.
 # Platforms
 
 * Linux
-* MacOS
-* Windows
+
+This plugin does currently not work on Windows since it requires the library `GTK.VTE` which is not available for windows systems. 

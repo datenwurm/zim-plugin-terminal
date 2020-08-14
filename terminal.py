@@ -16,7 +16,6 @@
 
 import logging
 import os
-import platform
 from pathlib import Path
 
 import gi
@@ -44,16 +43,8 @@ FONT_SIZE_MAX = 72
 DEFAULT_FONT_SIZE = 9
 DEFAULT_FONT_COLOR = "#FFFFFF"
 DEFAULT_BACKGROUND_COLOR = "#000000"
-
-if platform.system() == "Darwin":
-	DEFAULT_COMMAND_INTERPRETER = "/bin/bash"
-	CLEAR_COMMAND = "clear\n"
-elif platform.system() == "Linux":
-	DEFAULT_COMMAND_INTERPRETER = "/bin/bash"
-	CLEAR_COMMAND = "clear\n"
-elif platform.system() == "Windows":
-	DEFAULT_COMMAND_INTERPRETER = "cmd.exe"
-	CLEAR_COMMAND = "cls\r\n"
+DEFAULT_COMMAND_INTERPRETER = "/bin/bash"
+CLEAR_COMMAND = "clear\n"
 
 DEFAULT_AUTO_SWITCH_PATH_ON_PAGE_CHANGE = True
 
