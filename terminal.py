@@ -7,6 +7,7 @@
 #
 # ChangeLog
 # 2020-08-13 1st working version
+# 2020-09-09 Added copy-paste functionality
 #
 # TODO:
 # [ ] ...
@@ -106,6 +107,7 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
 		self._close_button = None
 
 		self.terminalview = Vte.Terminal()
+		self.terminalview.connect("key-press-event", self.on_key_press_event)
 		self.terminalview.spawn_sync(
 			Vte.PtyFlags.DEFAULT,
 			os.environ['HOME'],
@@ -146,6 +148,28 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
 
 	def on_change_path_button(self):
 		self.refresh_path()
+
+	def on_key_press_event(self, widget, event):
+		""" Implements copy (ctrl+shift+c) and paste (ctrl+shift+v) for the terminal. """
+		if event.type == Gdk.EventType.KEY_PRESS:
+			control_key = Gdk.ModifierType.CONTROL_MASK & event.state
+			shift_key = Gdk.ModifierType.SHIFT_MASK & event.state
+			if shift_key and control_key:  # shift  and control
+				if event.keyval == 67:  # C key
+					self.copy_clipboard()
+				elif event.keyval == 86:  # V key
+					self.paste_clipboard()
+				return True
+
+	def copy_clipboard(self):
+		""" Copies the selected text to the clipboard """
+		self.terminalview.copy_clipboard()
+		self.terminalview.grab_focus()
+
+	def paste_clipboard(self):
+		""" Pastes the selected text into the terminal """
+		self.terminalview.paste_clipboard()
+		self.terminalview.grab_focus()
 
 	def refresh_path(self):
 		""" Refresh the terminal and switch to the current path. """
