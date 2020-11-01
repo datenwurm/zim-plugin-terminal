@@ -45,7 +45,7 @@ DEFAULT_FONT_SIZE = 9
 DEFAULT_FONT_COLOR = "#FFFFFF"
 DEFAULT_BACKGROUND_COLOR = "#000000"
 DEFAULT_COMMAND_INTERPRETER = "/bin/bash"
-CLEAR_COMMAND = "clear\n"
+CLEAR_COMMAND = "clear"
 
 DEFAULT_AUTO_SWITCH_PATH_ON_PAGE_CHANGE = True
 
@@ -92,6 +92,28 @@ class TerminalWindowExtension(PageViewExtension):
 			pageview.notebook.get_attachments_dir(page)
 		)
 
+class ZimTerminal(Vte.Terminal):
+	""" 
+	A L{Vte.Terminal} with extra properties. 
+	see https://github.com/Guake/guake/blob/master/guake/terminal.py
+	"""
+	
+	def execute_command(self, command):
+		if command[-1] != "\n":
+			command += "\n"
+		self.feed_child(command)
+
+	def feed_child(self, resolved_cmdline):
+		if (Vte.MAJOR_VERSION, Vte.MINOR_VERSION) >= (0, 42):
+			encoded = resolved_cmdline.encode("utf-8")
+			try:
+				super().feed_child_binary(encoded)
+			except TypeError:
+				# The doc doest not say clearly at which version the feed_child* function has lost
+				# the "len" parameter :(
+				super().feed_child(resolved_cmdline, len(resolved_cmdline))
+		else:
+			super().feed_child(resolved_cmdline, len(resolved_cmdline))
 
 class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
 	""" Wrapper aroung the L{Vte.Terminal} that implements the actual terminal. """
@@ -106,7 +128,7 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
 		self.uistate = uistate
 		self._close_button = None
 
-		self.terminalview = Vte.Terminal()
+		self.terminalview = ZimTerminal()
 		self.terminalview.connect("key-press-event", self.on_key_press_event)
 		self.terminalview.spawn_sync(
 			Vte.PtyFlags.DEFAULT,
@@ -183,7 +205,7 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
 			None,
 		)
 		# Clear screen after terminal refresh
-		self.terminalview.feed_child(CLEAR_COMMAND, len(CLEAR_COMMAND))
+		self.terminalview.execute_command(CLEAR_COMMAND)
 
 	def set_folder(self, folder):
 		self.folder = folder
