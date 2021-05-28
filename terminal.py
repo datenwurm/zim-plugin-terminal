@@ -170,6 +170,7 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
 
 	def on_change_path_button(self):
 		self.refresh_path()
+		self.terminalview.grab_focus()
 
 	def on_key_press_event(self, widget, event):
 		""" Implements copy (ctrl+shift+c) and paste (ctrl+shift+v) for the terminal. """
