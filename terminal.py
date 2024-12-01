@@ -11,7 +11,7 @@
 # 2020-08-13 1st working version
 # 2020-09-09 Added copy-paste functionality
 # 2023-10-10 Added context menu
-#
+# 2024-12-01 Added ability to let users specifiy a init command
 
 
 import logging
@@ -43,6 +43,7 @@ DEFAULT_FONT_SIZE = 9
 DEFAULT_FONT_COLOR = "#FFFFFF"
 DEFAULT_BACKGROUND_COLOR = "#000000"
 DEFAULT_COMMAND_INTERPRETER = "/bin/bash"
+DEFAULT_INIT_COMMAND = ""
 CLEAR_COMMAND = "clear"
 
 DEFAULT_AUTO_SWITCH_PATH_ON_PAGE_CHANGE = True
@@ -63,6 +64,7 @@ class TerminalPlugin(PluginClass):
         ('font_color', 'color', _('Font color'), DEFAULT_FONT_COLOR),
         ('background_color', 'color', _('Background color'), DEFAULT_BACKGROUND_COLOR),
         ('command_interpreter', 'string', _('Command interpreter'), DEFAULT_COMMAND_INTERPRETER),
+        ('init_command', 'string', _('Terminal initialization command (runs at startup)'), DEFAULT_INIT_COMMAND),
         ('auto_switch_path_on_page_change', 'bool', _('Automatically switch to new path on page change'),
          DEFAULT_AUTO_SWITCH_PATH_ON_PAGE_CHANGE),
     )
@@ -133,15 +135,7 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
         self.terminalview = ZimTerminal()
         self.terminalview.connect("button-press-event", self.on_button_press)
         self.terminalview.connect("key-press-event", self.on_key_press_event)
-        self.terminalview.spawn_sync(
-            Vte.PtyFlags.DEFAULT,
-            os.environ['HOME'],
-            [self.command_interpreter],
-            [],
-            GLib.SpawnFlags.DO_NOT_REAP_CHILD,
-            None,
-            None,
-        )
+        self.init_terminal()
 
         self.add(ScrolledWindow(self.terminalview, shadow=Gtk.ShadowType.NONE))
 
@@ -154,7 +148,7 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
         properties_button = IconButton(Gtk.STOCK_PROPERTIES, relief=False)
         properties_button.connect('clicked', lambda o: self.on_properties_button())
         self.buttonbox.pack_start(properties_button, False, True, 0)
-
+ 
         change_path_button = IconButton(Gtk.STOCK_REFRESH, relief=False)
         change_path_button.connect('clicked', lambda o: self.on_change_path_button())
         self.buttonbox.pack_start(change_path_button, False, True, 0)
@@ -237,22 +231,25 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
         self.terminalview.paste_clipboard()
         self.terminalview.grab_focus()
 
-    def clear_terminal(self):
-        """Clear the terminal content."""
-        self.terminalview.reset(True, True)
-
-    def reset_terminal(self):
-        """ Resets the terminal to the current path. """
+    def init_terminal(self):
+        """ Initializes the terminal """
         self.terminalview.spawn_sync(
             Vte.PtyFlags.DEFAULT,
-            self.path,
+            os.environ['HOME'],
             [self.command_interpreter],
             [],
             GLib.SpawnFlags.DO_NOT_REAP_CHILD,
             None,
             None,
         )
-        # Clear screen after terminal refresh
+
+        # Execute init command
+        self.terminalview.execute_command(self.init_command)
+
+    def reset_terminal(self):
+        """ Resets the terminal to the current path. """
+        self.init_terminal()
+        # Clear screen after terminal init/refresh
         self.terminalview.execute_command(CLEAR_COMMAND)
 
     def show_properties(self):
@@ -284,6 +281,10 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
     @property
     def command_interpreter(self):
         return self.preferences["command_interpreter"]
+
+    @property
+    def init_command(self):
+        return self.preferences["init_command"] if self.preferences["init_command"] else ":"
 
     @property
     def path(self):
