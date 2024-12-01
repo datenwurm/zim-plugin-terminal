@@ -235,7 +235,7 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
         """ Initializes the terminal """
         self.terminalview.spawn_sync(
             Vte.PtyFlags.DEFAULT,
-            os.environ['HOME'],
+            self.path,
             [self.command_interpreter],
             [],
             GLib.SpawnFlags.DO_NOT_REAP_CHILD,
@@ -290,5 +290,8 @@ class TerminalPluginWidget(Gtk.HBox, WindowSidePaneWidget):
     def path(self):
         """ Returns the path to the attachment folder. If it does not exist the path to the wiki page is returned
         instead. """
-        _path = self.folder._inner_fs_object.path
-        return _path if os.path.isdir(_path) else str(Path(_path).parent)
+        try:
+            _path = self.folder._inner_fs_object.path
+            return _path if os.path.isdir(_path) else str(Path(_path).parent)
+        except:
+            return os.environ['HOME']
